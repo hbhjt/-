@@ -1,0 +1,10 @@
+name = "MiniCompiler"
+version = "0.1.0"
+defaultTargets = ["minicompiler"]
+
+[[lean_lib]]
+name = "MiniCompiler"
+
+[[lean_exe]]
+name = "minicompiler"
+root = "Main"
