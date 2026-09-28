@@ -1,16 +1,8 @@
 import MiniCompiler
 
-def main : IO Unit :=
-  IO.println s!"Hello, {hello}!"
+open MiniCompiler
 
-
-def x : Int := 10
-
-#check x
-#eval x
-
-def addOne (x : Int) : Int :=
-  x + 1
-
-#eval addOne 5
-#check addOne
+def main : IO Unit := do
+  IO.println s!"example1 = {eval example1}"
+  IO.println s!"example2 = {eval example2}"
+  IO.println s!"example3 = {eval example3}"
