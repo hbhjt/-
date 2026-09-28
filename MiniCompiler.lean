@@ -1,4 +1,4 @@
--- This module serves as the root of the `MiniCompiler` library.
--- Import modules here that should be built as part of the library.
 import MiniCompiler.Basic
+import MiniCompiler.Env
 import MiniCompiler.Expr
+import MiniCompiler.Optimize
