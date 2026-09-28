@@ -1,49 +1,108 @@
+import MiniCompiler.Env
+
 namespace MiniCompiler
 
-inductive Expr where
-  | const : Int -> Expr
-  | add   : Expr -> Expr -> Expr
-  | sub   : Expr -> Expr -> Expr
-  | mul   : Expr -> Expr -> Expr
+/-
+========================================
+算术表达式
+========================================
+-/
+
+inductive AExpr where
+  | const : Int -> AExpr
+  | var   : String -> AExpr
+  | add   : AExpr -> AExpr -> AExpr
+  | sub   : AExpr -> AExpr -> AExpr
+  | mul   : AExpr -> AExpr -> AExpr
 deriving Repr
 
-def eval : Expr → Int
-  | Expr.const n =>
+/--
+算术表达式解释器
+-/
+def evalA : AExpr -> Env -> Int
+  | AExpr.const n, _ =>
       n
-  | Expr.add e1 e2 =>
-      eval e1 + eval e2
-  | Expr.sub e1 e2 =>
-      eval e1 - eval e2
-  | Expr.mul e1 e2 =>
-      eval e1 * eval e2
 
-def example1 : Expr :=
-  Expr.add
-    (Expr.const 1)
-    (Expr.const 2)
+  | AExpr.var name, env =>
+      env name
 
-def example2 : Expr :=
-  Expr.add
-    (Expr.const 1)
-    (Expr.mul
-      (Expr.const 2)
-      (Expr.const 3))
+  | AExpr.add e1 e2, env =>
+      evalA e1 env + evalA e2 env
 
--- (10 - 3) * (2 + 4)
-def example3 : Expr :=
-  Expr.mul
-    (Expr.sub
-      (Expr.const 10)
-      (Expr.const 3))
-    (Expr.add
-      (Expr.const 2)
-      (Expr.const 4))
+  | AExpr.sub e1 e2, env =>
+      evalA e1 env - evalA e2 env
 
-#check Expr
-#check eval
+  | AExpr.mul e1 e2, env =>
+      evalA e1 env * evalA e2 env
 
-#eval eval example1
-#eval eval example2
-#eval eval example3
+
+/-
+========================================
+布尔表达式
+========================================
+-/
+
+inductive BExpr where
+  | eq   : AExpr -> AExpr -> BExpr
+  | less : AExpr -> AExpr -> BExpr
+  | and  : BExpr -> BExpr -> BExpr
+  | not  : BExpr -> BExpr
+deriving Repr
+
+/--
+布尔表达式解释器
+-/
+def evalB : BExpr -> Env -> Bool
+  | BExpr.eq e1 e2, env =>
+      evalA e1 env == evalA e2 env
+
+  | BExpr.less e1 e2, env =>
+      evalA e1 env < evalA e2 env
+
+  | BExpr.and b1 b2, env =>
+      evalB b1 env && evalB b2 env
+
+  | BExpr.not b, env =>
+      !evalB b env
+
+
+/-
+========================================
+测试表达式
+========================================
+-/
+
+-- 1 + 2 * 3
+def example1 : AExpr :=
+  AExpr.add
+    (AExpr.const 1)
+    (AExpr.mul
+      (AExpr.const 2)
+      (AExpr.const 3))
+
+-- x * 2 + y
+def example2 : AExpr :=
+  AExpr.add
+    (AExpr.mul
+      (AExpr.var "x")
+      (AExpr.const 2))
+    (AExpr.var "y")
+
+-- x < y
+def exampleBool1 : BExpr :=
+  BExpr.less
+    (AExpr.var "x")
+    (AExpr.var "y")
+
+-- (x < y) AND NOT (x = 0)
+def exampleBool2 : BExpr :=
+  BExpr.and
+    (BExpr.less
+      (AExpr.var "x")
+      (AExpr.var "y"))
+    (BExpr.not
+      (BExpr.eq
+        (AExpr.var "x")
+        (AExpr.const 0)))
 
 end MiniCompiler

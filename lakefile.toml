@@ -6,5 +6,5 @@ defaultTargets = ["minicompiler"]
 name = "MiniCompiler"
 
 [[lean_exe]]
-name = "minicompiler"
+name = "miniCompiler"
 root = "Main"
