@@ -2,43 +2,73 @@ import MiniCompiler
 
 open MiniCompiler
 
-def env : Env :=
-  update
-    (update emptyEnv "x" 10)
-    "y" 3
-
-
 def main : IO Unit := do
 
-  IO.println "===== Expression Evaluation ====="
+  IO.println "=== Counter Program ==="
 
-  IO.println s!"
-exampleA1 = {evalA exampleA1 env}"
+  match
+    runStmt
+      100
+      counterProgram
+      emptyEnv
+  with
 
-  IO.println s!"
-exampleA2 = {evalA exampleA2 env}"
+  | .ok env =>
 
-  IO.println s!"
-exampleA3 = {evalA exampleA3 env}"
+      let x :=
+        env "x"
+
+      IO.println s!"x = {x}"
+
+  | .error message =>
+
+      IO.println s!"Error: {message}"
 
 
   IO.println ""
-  IO.println "===== Boolean Evaluation ====="
 
-  IO.println s!"
-exampleB1 = {evalB exampleB1 env}"
+  IO.println "=== If Program ==="
 
-  IO.println s!"
-exampleB2 = {evalB exampleB2 env}"
+  match
+    runStmt
+      100
+      ifProgram
+      emptyEnv
+  with
+
+  | .ok env =>
+
+      let x :=
+        env "x"
+
+      let y :=
+        env "y"
+
+      IO.println s!"x = {x}"
+
+      IO.println s!"y = {y}"
+
+  | .error message =>
+
+      IO.println s!"Error: {message}"
 
 
   IO.println ""
-  IO.println "===== Optimization ====="
 
-  IO.println s!"
-before optimization =
-{evalA optimizeExample1 env}"
+  IO.println "=== Infinite Loop ==="
 
-  IO.println s!"
-after optimization =
-{evalA (optimize optimizeExample1) env}"
+  match
+    runStmt
+      10
+      infiniteLoop
+      emptyEnv
+  with
+
+  | .ok _ =>
+
+      IO.println
+        "Unexpected termination"
+
+  | .error message =>
+
+      IO.println s!"Error: {message}"

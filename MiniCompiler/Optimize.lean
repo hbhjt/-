@@ -3,95 +3,105 @@ import MiniCompiler.Expr
 namespace MiniCompiler
 
 /-
-==================================================
-局部优化器：加法
-==================================================
+========================================
+Add Optimization
+========================================
 
-优化规则：
+Constant folding:
+  1 + 2 -> 3
 
-0 + e   ==> e
-e + 0   ==> e
-
-Const x + Const y
-    ==> Const (x + y)
+Algebraic simplification:
+  e + 0 -> e
+========================================
 -/
 
 def optAdd (a b : AExpr) : AExpr :=
-  if a = AExpr.const 0 then
-    b
-  else if b = AExpr.const 0 then
-    a
-  else
-    match a, b with
-    | AExpr.const x, AExpr.const y =>
-        AExpr.const (x + y)
-    | _, _ =>
-        AExpr.add a b
+  match a, b with
+
+  | AExpr.const x, AExpr.const y =>
+      AExpr.const (x + y)
+
+  | a, AExpr.const y =>
+      if y = 0 then
+        a
+      else
+        AExpr.add a (AExpr.const y)
+
+  | a, b =>
+      AExpr.add a b
 
 
 /-
-==================================================
-局部优化器：减法
-==================================================
+========================================
+Sub Optimization
+========================================
 
-优化规则：
+Constant folding:
+  5 - 2 -> 3
 
-e - 0   ==> e
-
-Const x - Const y
-    ==> Const (x - y)
+Algebraic simplification:
+  e - 0 -> e
+========================================
 -/
 
 def optSub (a b : AExpr) : AExpr :=
-  if b = AExpr.const 0 then
-    a
-  else
-    match a, b with
-    | AExpr.const x, AExpr.const y =>
-        AExpr.const (x - y)
-    | _, _ =>
-        AExpr.sub a b
+  match a, b with
+
+  | AExpr.const x, AExpr.const y =>
+      AExpr.const (x - y)
+
+  | a, AExpr.const y =>
+      if y = 0 then
+        a
+      else
+        AExpr.sub a (AExpr.const y)
+
+  | a, b =>
+      AExpr.sub a b
 
 
 /-
-==================================================
-局部优化器：乘法
-==================================================
+========================================
+Mul Optimization
+========================================
 
-优化规则：
+Constant folding:
+  2 * 3 -> 6
 
-1 * e   ==> e
-e * 1   ==> e
-
-Const x * Const y
-    ==> Const (x * y)
+Algebraic simplification:
+  e * 1 -> e
+========================================
 -/
 
 def optMul (a b : AExpr) : AExpr :=
-  if a = AExpr.const 1 then
-    b
-  else if b = AExpr.const 1 then
-    a
-  else
-    match a, b with
-    | AExpr.const x, AExpr.const y =>
-        AExpr.const (x * y)
-    | _, _ =>
-        AExpr.mul a b
+  match a, b with
+
+  | AExpr.const x, AExpr.const y =>
+      AExpr.const (x * y)
+
+  | a, AExpr.const y =>
+      if y = 1 then
+        a
+      else
+        AExpr.mul a (AExpr.const y)
+
+  | a, b =>
+      AExpr.mul a b
 
 
 /-
-==================================================
-完整递归优化器
-==================================================
+========================================
+Recursive Optimizer
+========================================
 -/
 
 def optimize : AExpr → AExpr
+
   | AExpr.const n =>
       AExpr.const n
 
-  | AExpr.var x =>
-      AExpr.var x
+  | AExpr.var name =>
+      AExpr.var name
 
   | AExpr.add e1 e2 =>
       optAdd
@@ -110,59 +120,9 @@ def optimize : AExpr → AExpr
 
 
 /-
-==================================================
-测试
-==================================================
--/
-
--- (1 + 2) * (x + 0)
--- 优化为：3 * x
-def optimizeExample1 : AExpr :=
-  AExpr.mul
-    (AExpr.add
-      (AExpr.const 1)
-      (AExpr.const 2))
-    (AExpr.add
-      (AExpr.var "x")
-      (AExpr.const 0))
-
-
--- (10 - 0) * 1
--- 优化为：10
-def optimizeExample2 : AExpr :=
-  AExpr.mul
-    (AExpr.sub
-      (AExpr.const 10)
-      (AExpr.const 0))
-    (AExpr.const 1)
-
-
--- (2 * 3) + (4 - 1)
--- 优化为：9
-def optimizeExample3 : AExpr :=
-  AExpr.add
-    (AExpr.mul
-      (AExpr.const 2)
-      (AExpr.const 3))
-    (AExpr.sub
-      (AExpr.const 4)
-      (AExpr.const 1))
-
-
-#eval optimizeExample1
-#eval optimize optimizeExample1
-
-#eval optimizeExample2
-#eval optimize optimizeExample2
-
-#eval optimizeExample3
-#eval optimize optimizeExample3
-
-
-/-
-==================================================
-局部加法优化正确性
-==================================================
+========================================
+Correctness of optAdd
+========================================
 -/
 
 theorem evalA_optAdd
@@ -171,29 +131,76 @@ theorem evalA_optAdd
     evalA (optAdd a b) env =
       evalA a env + evalA b env := by
 
-  unfold optAdd
+  cases b with
 
-  by_cases ha : a = AExpr.const 0
+  | const y =>
 
-  · subst a
-    simp [evalA]
+      cases a with
 
-  · by_cases hb : b = AExpr.const 0
+      | const x =>
+          rfl
 
-    · subst b
-      simp [evalA, ha]
+      | var name =>
 
-    · simp [ha, hb]
+          by_cases h : y = 0
+
+          · simp [optAdd, evalA, h]
+
+          · simp [optAdd, evalA, h]
+
+      | add a1 a2 =>
+
+          by_cases h : y = 0
+
+          · simp [optAdd, evalA, h]
+
+          · simp [optAdd, evalA, h]
+
+      | sub a1 a2 =>
+
+          by_cases h : y = 0
+
+          · simp [optAdd, evalA, h]
+
+          · simp [optAdd, evalA, h]
+
+      | mul a1 a2 =>
+
+          by_cases h : y = 0
+
+          · simp [optAdd, evalA, h]
+
+          · simp [optAdd, evalA, h]
+
+
+  | var name =>
 
       cases a <;>
-      cases b <;>
-      simp [evalA]
+        rfl
+
+
+  | add b1 b2 =>
+
+      cases a <;>
+        rfl
+
+
+  | sub b1 b2 =>
+
+      cases a <;>
+        rfl
+
+
+  | mul b1 b2 =>
+
+      cases a <;>
+        rfl
 
 
 /-
-==================================================
-局部减法优化正确性
-==================================================
+========================================
+Correctness of optSub
+========================================
 -/
 
 theorem evalA_optSub
@@ -202,24 +209,76 @@ theorem evalA_optSub
     evalA (optSub a b) env =
       evalA a env - evalA b env := by
 
-  unfold optSub
+  cases b with
 
-  by_cases hb : b = AExpr.const 0
+  | const y =>
 
-  · subst b
-    simp [evalA]
+      cases a with
 
-  · simp [hb]
+      | const x =>
+          rfl
 
-    cases a <;>
-    cases b <;>
-    simp [evalA]
+      | var name =>
+
+          by_cases h : y = 0
+
+          · simp [optSub, evalA, h]
+
+          · simp [optSub, evalA, h]
+
+      | add a1 a2 =>
+
+          by_cases h : y = 0
+
+          · simp [optSub, evalA, h]
+
+          · simp [optSub, evalA, h]
+
+      | sub a1 a2 =>
+
+          by_cases h : y = 0
+
+          · simp [optSub, evalA, h]
+
+          · simp [optSub, evalA, h]
+
+      | mul a1 a2 =>
+
+          by_cases h : y = 0
+
+          · simp [optSub, evalA, h]
+
+          · simp [optSub, evalA, h]
+
+
+  | var name =>
+
+      cases a <;>
+        rfl
+
+
+  | add b1 b2 =>
+
+      cases a <;>
+        rfl
+
+
+  | sub b1 b2 =>
+
+      cases a <;>
+        rfl
+
+
+  | mul b1 b2 =>
+
+      cases a <;>
+        rfl
 
 
 /-
-==================================================
-局部乘法优化正确性
-==================================================
+========================================
+Correctness of optMul
+========================================
 -/
 
 theorem evalA_optMul
@@ -228,71 +287,134 @@ theorem evalA_optMul
     evalA (optMul a b) env =
       evalA a env * evalA b env := by
 
-  unfold optMul
+  cases b with
 
-  by_cases ha : a = AExpr.const 1
+  | const y =>
 
-  · subst a
-    simp [evalA]
+      cases a with
 
-  · by_cases hb : b = AExpr.const 1
+      | const x =>
+          rfl
 
-    · subst b
-      simp [evalA, ha]
+      | var name =>
 
-    · simp [ha, hb]
+          by_cases h : y = 1
+
+          · simp [optMul, evalA, h]
+
+          · simp [optMul, evalA, h]
+
+      | add a1 a2 =>
+
+          by_cases h : y = 1
+
+          · simp [optMul, evalA, h]
+
+          · simp [optMul, evalA, h]
+
+      | sub a1 a2 =>
+
+          by_cases h : y = 1
+
+          · simp [optMul, evalA, h]
+
+          · simp [optMul, evalA, h]
+
+      | mul a1 a2 =>
+
+          by_cases h : y = 1
+
+          · simp [optMul, evalA, h]
+
+          · simp [optMul, evalA, h]
+
+
+  | var name =>
 
       cases a <;>
-      cases b <;>
-      simp [evalA]
+        rfl
+
+
+  | add b1 b2 =>
+
+      cases a <;>
+        rfl
+
+
+  | sub b1 b2 =>
+
+      cases a <;>
+        rfl
+
+
+  | mul b1 b2 =>
+
+      cases a <;>
+        rfl
 
 
 /-
-==================================================
-最终定理：优化器正确性
-==================================================
+========================================
+Milestone 1
 
-对于任意环境 env 和表达式 e：
+Semantic preservation of optimization
+========================================
 
-evalA (optimize e) env = evalA e env
+For every expression e
+and every environment env:
+
+evalA (optimize e) env
+=
+evalA e env
+========================================
 -/
 
 theorem optimize_correct
-    (env : Env)
-    (e : AExpr) :
+    (e : AExpr)
+    (env : Env) :
     evalA (optimize e) env =
       evalA e env := by
 
   induction e with
 
   | const n =>
+
       rfl
 
-  | var x =>
+
+  | var name =>
+
       rfl
+
 
   | add e1 e2 ih1 ih2 =>
+
       calc
+
         evalA
-            (optimize (AExpr.add e1 e2))
+            (optimize
+              (AExpr.add e1 e2))
             env
+
             =
             evalA (optimize e1) env
-              +
+            +
             evalA (optimize e2) env := by
 
-              simpa [optimize] using
+              exact
                 evalA_optAdd
                   (optimize e1)
                   (optimize e2)
                   env
 
+
         _ =
             evalA e1 env
-              +
+            +
             evalA e2 env := by
 
               rw [ih1, ih2]
+
 
         _ =
             evalA
@@ -303,27 +425,33 @@ theorem optimize_correct
 
 
   | sub e1 e2 ih1 ih2 =>
+
       calc
+
         evalA
-            (optimize (AExpr.sub e1 e2))
+            (optimize
+              (AExpr.sub e1 e2))
             env
+
             =
             evalA (optimize e1) env
-              -
+            -
             evalA (optimize e2) env := by
 
-              simpa [optimize] using
+              exact
                 evalA_optSub
                   (optimize e1)
                   (optimize e2)
                   env
 
+
         _ =
             evalA e1 env
-              -
+            -
             evalA e2 env := by
 
               rw [ih1, ih2]
+
 
         _ =
             evalA
@@ -334,27 +462,33 @@ theorem optimize_correct
 
 
   | mul e1 e2 ih1 ih2 =>
+
       calc
+
         evalA
-            (optimize (AExpr.mul e1 e2))
+            (optimize
+              (AExpr.mul e1 e2))
             env
+
             =
             evalA (optimize e1) env
-              *
+            *
             evalA (optimize e2) env := by
 
-              simpa [optimize] using
+              exact
                 evalA_optMul
                   (optimize e1)
                   (optimize e2)
                   env
 
+
         _ =
             evalA e1 env
-              *
+            *
             evalA e2 env := by
 
               rw [ih1, ih2]
+
 
         _ =
             evalA
@@ -365,23 +499,60 @@ theorem optimize_correct
 
 
 /-
-==================================================
-运行测试
-==================================================
+========================================
+Tests
+========================================
+
+Original:
+
+(1 + 2) * (x + 0)
+
+Optimized:
+
+3 * x
+========================================
 -/
 
-def proofTestEnv : Env :=
-  update emptyEnv "x" 100
+def optimizeExample : AExpr :=
+  AExpr.mul
+
+    (AExpr.add
+      (AExpr.const 1)
+      (AExpr.const 2))
+
+    (AExpr.add
+      (AExpr.var "x")
+      (AExpr.const 0))
 
 
-#eval evalA optimizeExample1 proofTestEnv
-#eval evalA (optimize optimizeExample1) proofTestEnv
+#eval optimizeExample
 
-#eval evalA optimizeExample2 proofTestEnv
-#eval evalA (optimize optimizeExample2) proofTestEnv
+#eval optimize optimizeExample
 
-#eval evalA optimizeExample3 proofTestEnv
-#eval evalA (optimize optimizeExample3) proofTestEnv
+
+/-
+Another test:
+
+(10 - 0) * 1
+
+becomes:
+
+10
+-/
+
+def optimizeExample2 : AExpr :=
+  AExpr.mul
+
+    (AExpr.sub
+      (AExpr.const 10)
+      (AExpr.const 0))
+
+    (AExpr.const 1)
+
+
+#eval optimizeExample2
+
+#eval optimize optimizeExample2
 
 
 end MiniCompiler

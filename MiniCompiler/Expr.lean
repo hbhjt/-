@@ -4,7 +4,7 @@ namespace MiniCompiler
 
 /-
 ========================================
-算术表达式 AST
+Arithmetic Expressions
 ========================================
 -/
 
@@ -17,27 +17,11 @@ inductive AExpr where
 deriving Repr, DecidableEq
 
 
-/-
-========================================
-布尔表达式 AST
-========================================
+/--
+算术表达式求值。
 -/
-
-inductive BExpr where
-  | eq   : AExpr → AExpr → BExpr
-  | less : AExpr → AExpr → BExpr
-  | and  : BExpr → BExpr → BExpr
-  | not  : BExpr → BExpr
-deriving Repr
-
-
-/-
-========================================
-算术表达式解释器
-========================================
--/
-
 def evalA : AExpr → Env → Int
+
   | AExpr.const n, _ =>
       n
 
@@ -56,11 +40,23 @@ def evalA : AExpr → Env → Int
 
 /-
 ========================================
-布尔表达式解释器
+Boolean Expressions
 ========================================
 -/
 
+inductive BExpr where
+  | eq   : AExpr → AExpr → BExpr
+  | less : AExpr → AExpr → BExpr
+  | and  : BExpr → BExpr → BExpr
+  | not  : BExpr → BExpr
+deriving Repr, DecidableEq
+
+
+/--
+布尔表达式求值。
+-/
 def evalB : BExpr → Env → Bool
+
   | BExpr.eq e1 e2, env =>
       decide (evalA e1 env = evalA e2 env)
 
@@ -76,24 +72,12 @@ def evalB : BExpr → Env → Bool
 
 /-
 ========================================
-测试环境
-========================================
--/
-
-def exampleEnv : Env :=
-  update
-    (update emptyEnv "x" 10)
-    "y" 3
-
-
-/-
-========================================
-算术表达式测试
+一些测试表达式
 ========================================
 -/
 
 -- 1 + 2 * 3
-def exampleA1 : AExpr :=
+def arithmeticExample : AExpr :=
   AExpr.add
     (AExpr.const 1)
     (AExpr.mul
@@ -102,7 +86,7 @@ def exampleA1 : AExpr :=
 
 
 -- x * 2 + y
-def exampleA2 : AExpr :=
+def variableExample : AExpr :=
   AExpr.add
     (AExpr.mul
       (AExpr.var "x")
@@ -110,56 +94,10 @@ def exampleA2 : AExpr :=
     (AExpr.var "y")
 
 
--- (10 - 3) * (2 + 4)
-def exampleA3 : AExpr :=
-  AExpr.mul
-    (AExpr.sub
-      (AExpr.const 10)
-      (AExpr.const 3))
-    (AExpr.add
-      (AExpr.const 2)
-      (AExpr.const 4))
-
-
-#eval evalA exampleA1 exampleEnv
--- 7
-
-#eval evalA exampleA2 exampleEnv
--- 23
-
-#eval evalA exampleA3 exampleEnv
--- 42
-
-
-/-
-========================================
-布尔表达式测试
-========================================
--/
-
--- x < y
-def exampleB1 : BExpr :=
+-- x < 10
+def booleanExample : BExpr :=
   BExpr.less
     (AExpr.var "x")
-    (AExpr.var "y")
-
-
--- (x < y) AND NOT (x = 0)
-def exampleB2 : BExpr :=
-  BExpr.and
-    (BExpr.less
-      (AExpr.var "x")
-      (AExpr.var "y"))
-    (BExpr.not
-      (BExpr.eq
-        (AExpr.var "x")
-        (AExpr.const 0)))
-
-
-#eval evalB exampleB1 exampleEnv
--- false
-
-#eval evalB exampleB2 exampleEnv
--- false
+    (AExpr.const 10)
 
 end MiniCompiler
